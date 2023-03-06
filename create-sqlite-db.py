@@ -1,3 +1,4 @@
+import logging
 import sqlite3 as sl
 
 
@@ -5,7 +6,7 @@ def main():
     con = sl.connect('news-collector.db')
 
     # TABLE: tracked companies from e-disclosure.ru
-    print("Database initializing")
+    logging.debug("Database initializing")
     with con:
         con.execute("""
             CREATE TABLE IF NOT EXISTS edisclosureru (
@@ -16,11 +17,11 @@ def main():
                 site_company_id VARCHAR(255)
             );
         """)
-    print("Table 'edisclosureru' created")
+    logging.debug("Table 'edisclosureru' created")
 
     with con:
         con.execute("DELETE FROM edisclosureru")
-    print("Table 'edisclosureru' cleaned out")
+    logging.debug("Table 'edisclosureru' cleaned out")
 
     sql = 'INSERT INTO edisclosureru (shortname, ticker, inn, site_company_id) VALUES (?, ?, ?, ?)'
     data = [
@@ -29,13 +30,13 @@ def main():
     ]
     with con:
         con.executemany(sql, data)
-    print("Table 'edisclosureru' filled in")
+    logging.debug("Table 'edisclosureru' filled in")
 
     with con:
-        print("Table 'edisclosureru':")
+        logging.debug("Table 'edisclosureru':")
         data = con.execute("SELECT * FROM edisclosureru")
         for row in data:
-            print(row)
+            logging.debug(row)
 
     # TABLE: history of articles
     with con:
@@ -52,11 +53,11 @@ def main():
                 FOREIGN KEY(site_company_id) REFERENCES edisclosureru(site_company_id)
             );
         """)
-    print("Table 'edisclosureru_history' created")
+    logging.debug("Table 'edisclosureru_history' created")
 
     with con:
         con.execute("DELETE FROM edisclosureru_history")
-    print("Table 'edisclosureru_history' cleaned out")
+    logging.debug("Table 'edisclosureru_history' cleaned out")
 
     # TEMPORARY TABLE: tmp history of articles
     with con:
@@ -71,11 +72,11 @@ def main():
                 FOREIGN KEY(site_company_id) REFERENCES edisclosureru(site_company_id)
             );
         """)
-    print("Table 'tmp_edisclosureru_history' created")
+    logging.debug("Table 'tmp_edisclosureru_history' created")
 
     with con:
         con.execute("DELETE FROM tmp_edisclosureru_history")
-    print("Table 'tmp_edisclosureru_history' cleaned out")
+    logging.debug("Table 'tmp_edisclosureru_history' cleaned out")
 
 
 if __name__ == '__main__':

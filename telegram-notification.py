@@ -1,3 +1,4 @@
+import logging
 import os
 import sqlite3 as sl
 import time
@@ -20,11 +21,11 @@ def main():
                       'Событие: ' + str(row[2]) + '\n' + \
                       'Ссылка: ' + str(row[3])
             bot.send_message(chat_id=chat_id, text=message)
-            print('Сообщение отправлено: ' + str(message))
+            logging.debug('Сообщение отправлено: ' + str(message))
             con.execute("UPDATE edisclosureru_history SET is_notification_send = 1 WHERE id = " + str(row[0]))
             time.sleep(10)
 
 
 if __name__ == '__main__':
     main()
-    print("Notification sent")
+    logging.debug("Notification sent")

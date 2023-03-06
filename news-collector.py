@@ -1,4 +1,5 @@
 import datetime
+import logging
 import sqlite3 as sl
 
 import requests as requests
@@ -18,7 +19,7 @@ def main():
     }
     for company in companies_info:
         request_url = edisclosureru_company_news_url_prefix + company[3] + '&year=' + str(current_year)
-        print("Request URL: " + request_url)
+        logging.debug("Request URL: " + request_url)
         response = requests.get(url=request_url, headers=headers)
         soup = BeautifulSoup(response.text, 'html.parser')
         data = []
@@ -54,4 +55,4 @@ def main():
 
 if __name__ == '__main__':
     main()
-    print("New events downloaded")
+    logging.debug("New events downloaded")
