@@ -1,6 +1,6 @@
-import datetime
 import logging
 import sqlite3 as sl
+from datetime import datetime
 
 import requests as requests
 from bs4 import BeautifulSoup
@@ -13,7 +13,7 @@ def main():
     with con:
         companies_info = con.execute("SELECT id, shortname, inn, site_company_id FROM edisclosureru")
 
-    current_year = datetime.date.today().year
+    current_year = datetime.today().year
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:107.0) Gecko/20100101 Firefox/107.0',
     }
@@ -26,6 +26,7 @@ def main():
         for table_row in soup.findAll('tr')[1:]:
             cols = table_row.find_all('td')
             publication_date = cols[1].text.replace(u'\xa0', ' ')
+            publication_date = datetime.strptime(publication_date, '%d.%m.%Y %H:%M').strftime('%Y-%m-%d %H:%M')
             event_name = cols[2].text.replace('\n', '')
             company_short_name = company[1]
             site_company_id = company[3]
