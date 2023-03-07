@@ -13,7 +13,7 @@ def main():
     bot = telebot.TeleBot(telegram_token)
 
     with con:
-        res = con.execute("SELECT * FROM edisclosureru_history WHERE is_notification_send = 0 LIMIT 10")
+        res = con.execute("SELECT * FROM edisclosureru_history WHERE is_notification_send = 0 ORDER BY publication_date LIMIT 10")
         for row in res:
             message = 'id: ' + str(row[0]) + '\n' + \
                       'Наименование компании: ' + str(row[4]) + '\n' + \
