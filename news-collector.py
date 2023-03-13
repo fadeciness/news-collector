@@ -1,25 +1,79 @@
-import logging
-import sqlite3 as sl
+import sqlite3
 from datetime import datetime
 
 import requests as requests
 from bs4 import BeautifulSoup
 
 
+def get_companies_info():
+    connection = None
+    try:
+        connection = sqlite3.connect('news-collector.db')
+        cursor = connection.cursor()
+        query_get_companies_info = "SELECT id, shortname, inn, site_company_id FROM edisclosureru"
+        cursor.execute(query_get_companies_info)
+        companies_info = cursor.fetchall()
+        cursor.close()
+        return companies_info
+    except sqlite3.Error as error:
+        print("Ошибка при подключении к sqlite", error)
+    finally:
+        if connection:
+            connection.close()
+            print("Соединение с SQLite закрыто")
+
+
+def update_events_history(data):
+    connection = None
+    try:
+        connection = sqlite3.connect('news-collector.db')
+        cursor = connection.cursor()
+        query_insert_all_events = """
+            INSERT INTO tmp_edisclosureru_history 
+                (publication_date, event_name, event_url, shortname, site_company_id) 
+            VALUES (?, ?, ?, ?, ?);
+        """
+        count = cursor.executemany(query_insert_all_events, data)
+        connection.commit()
+        print("Общее количество загруженных событий: " + str(cursor.rowcount))
+        cursor.close()
+
+        cursor = connection.cursor()
+        # Update information in edisclosureru_history table
+        query_update_events_history = """
+            INSERT INTO edisclosureru_history (publication_date, event_name, event_url, shortname, site_company_id)
+                SELECT publication_date, event_name, event_url, shortname, site_company_id FROM tmp_edisclosureru_history
+            EXCEPT
+                SELECT publication_date, event_name, event_url, shortname, site_company_id FROM edisclosureru_history
+            """
+        count = cursor.execute(query_update_events_history)
+        connection.commit()
+        print("Количество новых событий: " + str(cursor.rowcount))
+        cursor.close()
+
+        cursor = connection.cursor()
+        query_delete_events_tmp_table = "DELETE FROM tmp_edisclosureru_history"
+        count = cursor.execute(query_delete_events_tmp_table)
+        connection.commit()
+        print("Временная таблица вычищена: " + str(cursor.rowcount))
+        cursor.close()
+    except sqlite3.Error as error:
+        print("Ошибка при подключении к sqlite", error)
+    finally:
+        if connection:
+            connection.close()
+            print("Соединение с SQLite закрыто")
+
 def main():
     edisclosureru_company_news_url_prefix = 'https://www.e-disclosure.ru/Event/Page?companyId='
-
-    con = sl.connect('news-collector.db')
-    with con:
-        companies_info = con.execute("SELECT id, shortname, inn, site_company_id FROM edisclosureru")
 
     current_year = datetime.today().year
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:107.0) Gecko/20100101 Firefox/107.0',
     }
-    for company in companies_info:
+    for company in get_companies_info():
         request_url = edisclosureru_company_news_url_prefix + company[3] + '&year=' + str(current_year)
-        logging.debug("Request URL: " + request_url)
+        print("Request URL: " + request_url)
         response = requests.get(url=request_url, headers=headers)
         soup = BeautifulSoup(response.text, 'html.parser')
         data = []
@@ -32,28 +86,9 @@ def main():
             site_company_id = company[3]
             event_url = cols[2].find('a')['href'].replace('\'', '')
             data.append((publication_date, event_name, event_url, company_short_name, site_company_id))
-
-        sql_insert = """
-            INSERT INTO tmp_edisclosureru_history 
-                (publication_date, event_name, event_url, shortname, site_company_id) 
-            VALUES (?, ?, ?, ?, ?);
-        """
-        with con:
-            con.executemany(sql_insert, data)
-
-        with con:
-            # Update information in edisclosureru_history table
-            con.execute("""
-                INSERT INTO edisclosureru_history (publication_date, event_name, event_url, shortname, site_company_id)
-                    SELECT publication_date, event_name, event_url, shortname, site_company_id FROM tmp_edisclosureru_history
-                EXCEPT
-                    SELECT publication_date, event_name, event_url, shortname, site_company_id FROM edisclosureru_history
-            """)
-
-        with con:
-            con.execute("DELETE FROM tmp_edisclosureru_history")
+        update_events_history(data)
 
 
 if __name__ == '__main__':
     main()
-    logging.debug("New events downloaded")
+    print("New events downloaded")
